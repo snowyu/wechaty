@@ -29,7 +29,7 @@ Raven.disableConsoleAlerts()
 Raven
 .config(
   process.env.NODE_ENV === 'production'
-    && 'https://f6770399ee65459a82af82650231b22c:d8d11b283deb441e807079b8bb2c45cd@sentry.io/179672',
+    && 'https://b21a8aec18b948bda2e6766d4289bd6b@sentry.io/186797',
   {
     release: require('../package.json').version,
     tags: {
