@@ -17,7 +17,8 @@
   "scripts": {
     "ava": "ava --verbose --extension ts",
     "ts-node": "ts-node",
-    "dist": "npm run clean && tsc && jq \"del (.files)\" < package.json > dist/package.json && shx cp src/puppet-web/*.js dist/src/puppet-web/",
+    "prepublish": "npm run dist",
+    "dist": "npm run clean && tsc && node_modules/node-jq/bin/jq \"del (.files)\" < package.json > dist/package.json && shx cp src/puppet-web/*.js dist/src/puppet-web/",
     "doc": "npm run dist && echo '# Wechaty v'$(jq -r .version package.json)' Documentation\n' > docs/index.md && jsdoc2md dist/src/{wechaty,room,contact,friend-request,message}.js dist/src/puppet-web/friend-request.js>> docs/index.md",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "changelog": "github_changelog_generator -u chatie -p wechaty && sed -i'.bak' /greenkeeper/d CHANGELOG.md",
@@ -147,6 +148,7 @@
     "fluent-ffmpeg": "2.1.2",
     "glob": "7.1.2",
     "jsdoc-to-markdown": "3.0.0",
+    "node-jq": "^0.7.0",
     "nyc": "11.2.1",
     "qrcode-terminal": "0.11.0",
     "shx": "0.2.2",
