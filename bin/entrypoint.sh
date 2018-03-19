@@ -9,8 +9,6 @@ set -e
 HOME=/bot
 PATH=$PATH:/wechaty/bin:/wechaty/node_modules/.bin
 
-export WECHATY_DOCKER=1
-
 function wechaty::banner() {
   echo
   figlet " Wechaty "
@@ -20,7 +18,12 @@ function wechaty::banner() {
 
 function wechaty::errorBotNotFound() {
   local file=$1
-  echo "ERROR: can not found bot file: $file"
+  echo "Container ERROR: can not found bot file: $HOME/$file"
+
+  echo "Container PWD: $(pwd)"
+  echo "Container HOME: $HOME"
+  echo "Container LS $HOME: $(ls -l $HOME)"
+
   figlet " Troubleshooting "
   cat <<'TROUBLESHOOTING'
 
@@ -34,6 +37,11 @@ function wechaty::errorBotNotFound() {
         `--volume="$(pwd)":/bot`
 
       this will let the container visit your current directory.
+
+    2. Are you sure your .js/.ts files aren't .js.txt/.ts.txt?
+
+      this could be a problem on new Windows installs (file
+      extensions hidden by default).
 
     if you still have issue, please have a look at
       https://github.com/chatie/wechaty/issues/66
@@ -119,7 +127,7 @@ function wechaty::runBot() {
     # NPM module install will have problem in China.
     # i.e. chromedriver need to visit a google host to download binarys.
     #
-    echo "Please make sure you had installed all the NPM modules which is depended by your bot script."
+    echo "Please make sure you had installed all the NPM modules which is depended on your bot script."
     # yarn < /dev/null || return $? # yarn will close stdin??? cause `read` command fail after yarn
 
   }
@@ -134,8 +142,9 @@ function wechaty::runBot() {
   case "$botFile" in
     *.js)
       if [ "$NODE_ENV" != "production" ]; then
-        echo "Executing babel-node --presets es2015 $*"
-        babel-node --presets es2015 "$@" &
+        echo "Executing babel-node --presets env $*"
+        # https://stackoverflow.com/a/34025957/1123955
+        BABEL_DISABLE_CACHE=1 babel-node --presets env "$@" &
       else
         echo "Executing node $*"
         node "$@" &
@@ -144,7 +153,7 @@ function wechaty::runBot() {
     *.ts)
       # yarn add @types/node
       echo "Executing ts-node $*"
-      ts-node "$@" &
+      ts-node --type-check "$@" &
       ;;
     *)
       echo "ERROR: wechaty::runBot() neith .js nor .ts"
@@ -206,7 +215,7 @@ HELP
 
 function main() {
   # issue #84
-  echo -e 'nameserver 114.114.114.114\nnameserver 114.114.115.115' >> /etc/resolv.conf
+  echo -e 'nameserver 114.114.114.114\nnameserver 114.114.115.115' | sudo tee -a /etc/resolv.conf > /dev/null
 
   wechaty::banner
   figlet Connecting
@@ -260,6 +269,7 @@ function main() {
       ;;
 
     test)
+      # WECHATY_LOG=silent npm run test:unit
       WECHATY_LOG=silent npm run test
       ;;
 

@@ -1,7 +1,8 @@
+#!/usr/bin/env ts-node
 /**
  *   Wechaty - https://github.com/chatie/wechaty
  *
- *   @copyright 2016-2017 Huan LI <zixia@zixia.net>
+ *   @copyright 2016-2018 Huan LI <zixia@zixia.net>
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -21,15 +22,18 @@
  * Process the Message to find which event to FIRE
  */
 
-import { test }   from 'ava'
+// tslint:disable:no-shadowed-variable
+import * as test  from 'blue-tape'
+// import * as sinon from 'sinon'
+// const sinonTest   = require('sinon-test')(sinon)
 
 import { Firer }  from './firer'
 
-test('Firer smoke testing', t => {
+test('Firer smoke testing', async t => {
   t.true(true, 'should be true')
 })
 
-test('parseFriendConfirm()', t => {
+test('parseFriendConfirm()', async t => {
   const contentList = [
     [
       'You have added 李卓桓 as your WeChat contact. Start chatting!',
@@ -59,37 +63,42 @@ test('parseFriendConfirm()', t => {
   t.false(result, 'should be falsy for other msg')
 })
 
-test('parseRoomJoin()', t => {
+test('parseRoomJoin()', async t => {
   const contentList: [string, string, string[]][] = [
     [
-      `You've invited "李卓桓" to the group chat`,
-      `You've`,
-      [`李卓桓`],
+      `You invited 管理员 to the group chat.   `,
+      `You`,
+      [`管理员`],
     ],
     [
-      `You've invited "李卓桓.PreAngel、Bruce LEE" to the group chat`,
-      `You've`,
+      `You invited 李卓桓.PreAngel、Bruce LEE to the group chat.   `,
+      `You`,
       [`李卓桓.PreAngel`, `Bruce LEE`],
     ],
     [
-      `"李卓桓.PreAngel" invited "Bruce LEE" to the group chat`,
-      `李卓桓.PreAngel`,
-      [`Bruce LEE`],
+      `管理员 invited 小桔建群助手 to the group chat`,
+      `管理员`,
+      [`小桔建群助手`],
     ],
     [
-      `"凌" invited "庆次、小桔妹" to the group chat`,
-      `凌`,
+      `管理员 invited 庆次、小桔妹 to the group chat`,
+      `管理员`,
       ['庆次', '小桔妹'],
     ],
     [
-      `你邀请"李佳芮"加入了群聊`,
+      `你邀请"管理员"加入了群聊  `,
       `你`,
-      ['李佳芮'],
+      ['管理员'],
     ],
     [
-      `"桔小秘"通过扫描你分享的二维码加入群聊`,
+      `"管理员"邀请"宁锐锋"加入了群聊`,
+      `管理员`,
+      ['宁锐锋'],
+    ],
+    [
+      `"管理员"通过扫描你分享的二维码加入群聊  `,
       `你`,
-      ['桔小秘'],
+      ['管理员'],
     ],
     [
       `" 桔小秘"通过扫描"李佳芮"分享的二维码加入群聊`,
@@ -97,31 +106,21 @@ test('parseRoomJoin()', t => {
       ['桔小秘'],
     ],
     [
-      `"桔小秘"通过扫描"李佳芮"分享的二维码加入群聊`,
-      `李佳芮`,
-      ['桔小秘'],
+      `"管理员" joined group chat via the QR code you shared.  `,
+      `you`,
+      ['管理员'],
     ],
     [
-      `"桔小秘" joined the group chat via your shared QR Code.`,
-      `your`,
-      ['桔小秘'],
-    ],
-    [
-      `" 桔小秘" joined the group chat via the QR Code shared by "李佳芮".`,
-      `李佳芮`,
-      ['桔小秘'],
-    ],
-    [
-      `"桔小秘" joined the group chat via the QR Code shared by "李佳芮".`,
-      `李佳芮`,
-      ['桔小秘'],
+      `"宁锐锋" joined the group chat via the QR Code shared by "管理员".`,
+      `管理员`,
+      ['宁锐锋'],
     ],
   ]
 
   let result
   contentList.forEach(([content, inviter, inviteeList]) => {
     result = Firer.parseRoomJoin(content)
-    t.truthy(result, 'should check room join message right for ' + content)
+    t.ok(result, 'should check room join message right for ' + content)
     t.deepEqual(result[0], inviteeList, 'should get inviteeList right')
     t.is(result[1], inviter, 'should get inviter right')
   })
@@ -131,7 +130,7 @@ test('parseRoomJoin()', t => {
   }, Error, 'should throws if message is not expected')
 })
 
-test('parseRoomLeave()', t => {
+test('parseRoomLeave()', async t => {
   const contentLeaverList = [
     [
       `You removed "Bruce LEE" from the group chat`,
@@ -156,13 +155,13 @@ test('parseRoomLeave()', t => {
 
   contentLeaverList.forEach(([content, leaver]) => {
     const resultLeaver = Firer.parseRoomLeave(content)[0]
-    t.truthy(resultLeaver, 'should get leaver for leave message: ' + content)
+    t.ok(resultLeaver, 'should get leaver for leave message: ' + content)
     t.is(resultLeaver, leaver, 'should get leaver name right')
   })
 
   contentRemoverList.forEach(([content, remover]) => {
     const resultRemover = Firer.parseRoomLeave(content)[1]
-    t.truthy(resultRemover, 'should get remover for leave message: ' + content)
+    t.ok(resultRemover, 'should get remover for leave message: ' + content)
     t.is(resultRemover, remover, 'should get leaver name right')
   })
 
@@ -171,7 +170,7 @@ test('parseRoomLeave()', t => {
   }, Error, 'should throw if message is not expected')
 })
 
-test('parseRoomTopic()', t => {
+test('parseRoomTopic()', async t => {
   const contentList = [
     [
       `"李卓桓.PreAngel" changed the group name to "ding"`,
@@ -188,7 +187,7 @@ test('parseRoomTopic()', t => {
   let result
   contentList.forEach(([content, changer, topic]) => {
     result = Firer.parseRoomTopic(content)
-    t.truthy(result, 'should check topic right for content: ' + content)
+    t.ok(result, 'should check topic right for content: ' + content)
     t.is(topic  , result[0], 'should get right topic')
     t.is(changer, result[1], 'should get right changer')
   })

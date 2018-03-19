@@ -1,7 +1,7 @@
 /**
  *   Wechaty - https://github.com/chatie/wechaty
  *
- *   @copyright 2016-2017 Huan LI <zixia@zixia.net>
+ *   @copyright 2016-2018 Huan LI <zixia@zixia.net>
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -20,32 +20,25 @@
 /**
  * Wechaty - Wechat for Bot, and human who talk to bot.
  *
- * Class PuppetWebInjectio
+ * PuppetWeb: WechatyBro
  *
  * Inject this js code to browser,
  * in order to interactive with wechat web program.
  *
- * Licenst: Apache-2.0
- * https://github.com/chatie/wechaty
- *
  * ATTENTION:
  *
- * JAVASCRIPT IN THIS FILE
- * IS RUN INSIDE
+ * JavaScript in this file will be ran inside:
  *
  *    BROWSER
  *
- * INSTEAD OF
+ * instead of
  *
- *    NODE
+ *    NODE.js
  *
- * read more about this in puppet-web-bridge.js
- *
+ * read more about this in puppet-web-bridge.ts
  */
 
-/*global angular*/
-
-(function(port) {
+(function() {
 
   function init() {
     if (!angularIsReady()) {
@@ -54,132 +47,36 @@
       return retObj
     }
 
-    if (!initClog(false)) { // make console.log work (wxapp disabled the console.log)
-      retObj.code = 503 // 503 Service Unavailable http://www.restapitutorial.com/httpstatuscodes.html
-      retObj.message = 'initClog fail'
-      return retObj
-    }
-
-    if (WechatyBro.vars.initStatus === true) {
+    if (WechatyBro.vars.initState === true) {
       log('WechatyBro.init() called twice: already inited')
       retObj.code = 304 // 304 Not Modified https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3.5
       retObj.message = 'init() already inited before. returned with do nothing'
       return retObj
     }
 
-    clog('init on port:' + port)
-
     if (MMCgiLogined()) {
       login('page refresh')
     }
 
     glueToAngular()
-    connectSocket()
     hookEvents()
     hookRecalledMsgProcess()
 
-    checkScan()
+    log('init() scanCode: ' + WechatyBro.vars.scanCode)
+    setTimeout(() => checkScan(), 1000)
 
     heartBeat(true)
 
-    clog('inited!. ;-D')
-    WechatyBro.vars.initStatus = true
+    log('inited!. ;-D')
+    WechatyBro.vars.initState = true
 
     retObj.code = 200
-    retObj.message = 'WechatyBro Init Succ on port: ' + port
+    retObj.message = 'WechatyBro Init Succ'
     return retObj
   }
 
-  /**
-  * Log to console
-  * http://stackoverflow.com/a/7089553/1123955
-  */
-  function initClog(enabled) {
-    if (!enabled) {
-      return true
-    }
-
-    if (WechatyBro.vars.iframe) {
-      log('initClog() again? there is already a iframe')
-      return true
-    }
-
-    if (!document.body) { // Javascript Error Null is not an Object
-      // log('initClog() not ready because document.body not ready')
-      return false
-    }
-
-    var i = document.createElement('iframe')
-    if (!i) {
-      // log('initClog() not ready because document.createElement fail')
-      return false
-    }
-
-    // slog('initClog got iframe element')
-    i.style.display = 'none'
-    document.body.appendChild(i)
-    WechatyBro.vars.iframe = i
-    // if (!WechatyBro.vars.iframe) {
-    //   throw new Error('iframe gone after appendChild, WTF???')
-    // }
-    // slog('initClog done')
-    return true
-  }
-
-  function clog(s) {
-    if (!WechatyBro.vars.iframe) {
-      // throw new Error('clog() iframe not found when be invocked')
-      return
-    }
-
-    var d = new Date()
-    s = d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds() + ' <WechatyBro> ' + s
-
-    WechatyBro.vars.iframe.contentWindow.console.log(s)
-  }
-
-  function slog(msg)  { WechatyBro.emit('log', msg) }
-  function log(s)     { clog(s); slog(s) }
-
-  /**
-   * WechatyBro.emit, will save event & data when there's no socket io connection to prevent event lost
-   * NOTICE: only clog available here, because slog & log will call emit, death loop
-   */
-  function emit(event, data) {
-    var eventsBuf = WechatyBro.vars.eventsBuf
-    if (!Array.isArray(eventsBuf)) {
-      throw new Error('WechatyBro.vars.eventsBuf must be a Array')
-    }
-    if (event) {
-      eventsBuf.unshift([event, data])
-    }
-    var socket = WechatyBro.vars.socket
-    // readyState: A value of 1 indicates that the connection is established and communication is possible.
-    if (!socket || socket.readyState !== 1) {
-      clog('WechatyBro.vars.socket not ready')
-      return setTimeout(emit, 1000) // resent eventsBuf after 1000ms
-    }
-    var bufLen = eventsBuf.length
-    if (bufLen) {
-      if (bufLen > 1) { clog('WechatyBro.vars.eventsBuf has ' + bufLen + ' unsend events') }
-
-      while (eventsBuf.length) {
-        var eventData = eventsBuf.pop()
-        if (eventData && eventData.map && eventData.length===2) {
-          clog('emiting ' + eventData[0])
-          // socket.emit(eventData[0], eventData[1])
-          var obj = {
-            name: eventData[0],
-            data: eventData[1],
-          }
-          socket.send(JSON.stringify(obj))
-        } else {
-          clog('WechatyBro.emit() got invalid eventData: ' + eventData[0] + ', ' + eventData[1] + ', length: ' + eventData.length)
-        }
-      }
-
-      if (bufLen > 1) { clog('WechatyBro.vars.eventsBuf[' + bufLen + '] all sent') }
-    }
+  function log(text) {
+    WechatyBro.emit('log', text)
   }
 
   /**
@@ -187,7 +84,9 @@
   * Functions that Glued with AngularJS
   *
   */
-  function MMCgiLogined() { return !!(window.MMCgi && window.MMCgi.isLogin) }
+  function MMCgiLogined() {
+    return !!(window.MMCgi && window.MMCgi.isLogin)
+  }
 
   function angularIsReady() {
     // don't log inside, because we has not yet init clog here.
@@ -202,7 +101,7 @@
   function heartBeat(firstTime) {
     var TIMEOUT = 15000 // 15s
     if (firstTime && WechatyBro.vars.heartBeatTimmer) {
-      WechatyBro.log('heartBeat timer exist when 1st time is true? return for do nothing')
+      log('heartBeat timer exist when 1st time is true? return for do nothing')
       return
     }
     WechatyBro.emit('ding', 'heartbeat@browser')
@@ -266,41 +165,44 @@
 
     // get all we need from wx in browser(angularjs)
     WechatyBro.glue = {
-      injector:       injector
-      , http:         http
-      , mmHttp:       mmHttp
-      , state:        state
+      injector,
+      http,
+      mmHttp,
+      state,
 
-      , accountFactory:  accountFactory
-      , chatroomFactory: chatroomFactory
-      , chatFactory:     chatFactory
-      , confFactory:     confFactory
-      , contactFactory:  contactFactory
-      , emojiFactory:    emojiFactory
-      , loginFactory:    loginFactory
-      , utilFactory:     utilFactory
+      accountFactory,
+      chatroomFactory,
+      chatFactory,
+      confFactory,
+      contactFactory,
+      emojiFactory,
+      loginFactory,
+      utilFactory,
 
-      , rootScope:    rootScope
-      , appScope:     appScope
-      , loginScope:   loginScope
+      rootScope,
+      appScope,
+      loginScope,
 
-      , contentChatScope: contentChatScope
+      contentChatScope,
     }
 
     return true
   }
 
   function checkScan() {
-    clog('checkScan()')
-    if (isLogin()) {
+    // log('checkScan()')
+    if (loginState()) {
       log('checkScan() - already login, no more check, and return(only)') //but I will emit a login event')
       // login('checkScan found already login')
       return
     }
-    if (!WechatyBro.glue.loginScope) {
-      log('checkScan() - loginScope disappeared, no more check')
-      login('loginScope disappeared')
-      return
+
+    const loginScope = WechatyBro.glue.loginScope
+    if (!loginScope) {
+      log('checkScan() - loginScope disappeared, TODO: find out the reason why this happen')
+      // login('loginScope disappeared')
+      // return
+      return setTimeout(checkScan, 1000)
     }
 
     // loginScope.code:
@@ -308,57 +210,70 @@
     // 408: 未确认（显示二维码后30秒触发）
     // 201: 扫描，未确认
     // 200: 登录成功
-    var code  = +WechatyBro.glue.loginScope.code
-    var url   =  WechatyBro.glue.loginScope.qrcodeUrl
-    if (url && code !== WechatyBro.vars.scanCode) {
+    var code  = +loginScope.code
+    var url   =  loginScope.qrcodeUrl
+    log('checkScan() code:' + code + ' url:' + url + ' scanCode:' + WechatyBro.vars.scanCode)
 
+    if (url && code !== WechatyBro.vars.scanCode) {
       log('checkScan() - code change detected: from '
         + WechatyBro.vars.scanCode
         + ' to '
         + code
       )
       WechatyBro.emit('scan', {
-        code:   code
-        , url:  url
+        code : code,
+        url  : url,
       })
       WechatyBro.vars.scanCode = code
     }
 
-    if (code === 200) {
-      login('scan code 200')
-    } else {
-      setTimeout(checkScan, 1000)
+    if (code !== 200) {
+      return setTimeout(checkScan, 1000)
     }
+
+    WechatyBro.vars.scanCode = null
+    loginScope.code          = null
+
+    // wait a while because the account maybe blocked by tencent,
+    // then there will be a dialog should appear
+    setTimeout(() => login('scan code 200'), 1000)
     return
   }
 
-  function isLogin() { return !!WechatyBro.vars.loginStatus }
-  function login(data) {
-    log('login(' + data + ')')
-    if (!WechatyBro.vars.loginStatus) {
-      WechatyBro.vars.loginStatus = true
+  function loginState(state) {
+    if (typeof state === 'undefined') {
+      return !!WechatyBro.vars.loginState
     }
-    WechatyBro.emit('login', data)
-  }
-  function logout(data) {
-    log('logout(' + data + ')')
-    WechatyBro.vars.loginStatus = false
-    // WechatyBro.emit('logout', data)
-    if (WechatyBro.glue.loginFactory) {
-      WechatyBro.glue.loginFactory.loginout()
-    }
-    checkScan()
-  }
-  function quit() {
-    log('quit()')
-    logout('quit()')
-    if (WechatyBro.vars.socket) {
-      WechatyBro.vars.socket.close()
-      WechatyBro.vars.socket = null
-    }
+    WechatyBro.vars.loginState = state
+    return
   }
 
-  function ding(data) { log('recv ding'); return data || 'dong' }
+  function login(data) {
+    log('login(' + data + ')')
+    loginState(true)
+    WechatyBro.emit('login', data)
+  }
+
+  function logout(data) {
+    log('logout(' + data + ')')
+
+    loginState(false)
+
+    // WechatyBro.emit('logout', data)
+    if (WechatyBro.glue.loginFactory) {
+      WechatyBro.glue.loginFactory.loginout(0)
+    } else {
+      log('logout() WechatyBro.glue.loginFactory NOT found')
+    }
+
+    setTimeout(() => checkScan(), 1000)
+  }
+
+  function ding(data) {
+    log('recv ding')
+    return data || 'dong'
+  }
+
   function hookEvents() {
     var rootScope = WechatyBro.glue.rootScope
     var appScope = WechatyBro.glue.appScope
@@ -367,7 +282,7 @@
       return false
     }
     rootScope.$on('message:add:success', function(event, data) {
-      if (!isLogin()) { // in case of we missed the pageInit event
+      if (!loginState()) { // in case of we missed the pageInit event
         login('by event[message:add:success]')
       }
       WechatyBro.emit('message', data)
@@ -382,10 +297,7 @@
     window.addEventListener('unload', function(e) {
       // XXX only 1 event can be emitted here???
       WechatyBro.emit('unload', String(e))
-      // WechatyBro.slog('emit unload')
-      // WechatyBro.emit('logout', e)
-      // WechatyBro.slog('emit logout')
-      // WechatyBro.slog('emit logout&unload over')
+      log('event unload')
     })
     return true
   }
@@ -394,11 +306,12 @@
     var chatFactory = WechatyBro.glue.chatFactory
     var utilFactory = WechatyBro.glue.utilFactory
     var confFactory = WechatyBro.glue.confFactory
+
     // hook chatFactory._recalledMsgProcess, resolve emit RECALLED type msg
-    chatFactory.__recalledMsgProcess = chatFactory._recalledMsgProcess
+    oldRecalledMsgProcess = chatFactory._recalledMsgProcess
     chatFactory._recalledMsgProcess = function(msg) {
-      chatFactory.__recalledMsgProcess(msg)
-      var m = Object.assign({},msg)
+      oldRecalledMsgProcess(msg)
+      var m = Object.assign({}, msg)
       var content = utilFactory.htmlDecode(m.MMActualContent)
       content = utilFactory.encodeEmoji(content)
       var revokemsg = utilFactory.xml2json(content).revokemsg
@@ -417,38 +330,6 @@
     }
   }
 
-  function connectSocket() {
-    log('connectSocket()')
-    /*global socket*/ // WechatyBro global variable: socket
-    var socket  = WechatyBro.vars.socket = new WebSocket('wss://127.0.0.1:' + port)
-
-    socket.onmessage = function(messageEvent) {
-      var data = messageEvent.data
-      log('socket.onmessage: ' + data)
-
-      var recvObj = JSON.parse(data)
-      var name = recvObj.name
-      var data = recvObj.data
-      switch (name) {
-        // ding -> dong. for test & live check purpose
-        // ping/pong are reserved by socket.io https://github.com/socketio/socket.io/issues/2414
-        case 'ding':
-          var obj = {
-            name: 'dong',
-            data: data,
-          }
-          socket.send(JSON.stringify(obj))
-          break
-        default:
-          clog('unknown event name: ' + name)
-      }
-    }
-
-    socket.onopen   = function(e) { clog('connected to server:' + e) }
-    socket.onclose  = function(e) { clog('socket disconnect:'   + e) }
-    socket.onerror  = function(e) { clog('WebSocket error:' + e) }
-  }
-
   /**
    *
    * Help Functions which Proxy to WXAPP AngularJS Scope & Factory
@@ -460,9 +341,10 @@
     if (!contentChatScope) {
       throw new Error('getMsgImg() contentChatScope not found')
     }
-    var location = window.location.href.replace(/\/$/, '')
     var path = contentChatScope.getMsgImg(id, type, message)
-    return location + path
+    return window.location.origin + path
+    // https://wx.qq.com/?&lang=en_US/cgi-bin/mmwebwx-bin/webwxgetmsgimg?&MsgID=4520385745174034093&skey=%40crypt_f9cec94b_a3aa5c868466d81bc518293eb292926e
+    // https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetmsgimg?&MsgID=8454987316459381112&skey=%40crypt_f9cec94b_bd210b2224f217afeab8d462af70cf53
   }
 
   function getMsgEmoticon(id) {
@@ -477,9 +359,8 @@
     if (!contentChatScope) {
       throw new Error('getMsgVideo() contentChatScope not found')
     }
-    var location = window.location.href.replace(/\/$/, '')
     var path = contentChatScope.getMsgVideo(id)
-    return location + path
+    return window.location.origin + path
   }
 
   /**
@@ -489,15 +370,13 @@
     var confFactory     = WechatyBro.glue.confFactory
     var accountFactory  = WechatyBro.glue.accountFactory
 
-    var location = window.location.href.replace(/\/$/, '')
     var path = confFactory.API_webwxgetvoice + "?msgid=" + id + "&skey=" + accountFactory.getSkey()
-    return location + path
+    return window.location.origin + path
   }
 
   function getMsgPublicLinkImg(id) {
-    var location = window.location.href.replace(/\/$/, '')
     var path = '/cgi-bin/mmwebwx-bin/webwxgetpubliclinkimg?url=xxx&msgid=' + id + '&pictype=location'
-    return location + path
+    return window.location.origin + path
   }
 
   function getBaseRequest() {
@@ -510,6 +389,11 @@
   function getPassticket() {
     var accountFactory = WechatyBro.glue.accountFactory
     return accountFactory.getPassticket()
+  }
+
+  function getCheckUploadUrl() {
+    var confFactory = WechatyBro.glue.confFactory
+    return confFactory.API_checkupload
   }
 
   function getUploadMediaUrl() {
@@ -534,10 +418,18 @@
         FileName: data.FileName,
         FileSize: data.FileSize,
         MMFileExt: data.MMFileExt,
-        MMFileId: data.MMFileId
+      }
+
+      if (data.Signature) {
+        d.Signature = data.Signature
       }
 
       var m = chatFactory.createMessage(d)
+
+      m.MMFileStatus = confFactory.MM_SEND_FILE_STATUS_SUCCESS
+      m.MMStatus = confFactory.MSG_SEND_STATUS_SUCC
+      m.sendByLocal = false
+
       chatFactory.appendMessage(m)
       chatFactory.sendMessage(m)
     } catch (e) {
@@ -582,9 +474,9 @@
     }
     try {
       var m = chatFactory.createMessage({
-        ToUserName: ToUserName
-        , Content: Content
-        , MsgType: confFactory.MSGTYPE_TEXT
+        ToUserName: ToUserName,
+        Content:    Content,
+        MsgType:    confFactory.MSGTYPE_TEXT,
       })
       chatFactory.appendMessage(m)
       chatFactory.sendMessage(m)
@@ -622,23 +514,23 @@
        * try to find in room's member list for this `id`, and return the contact info, if any.
        */
       c = Object.keys(_contacts)
-                .filter(function(id) { return id.match(/^@@/) })    // only search in room
-                .map(function(id) { return _contacts[id] })         // map to room array
-                .filter(function(r) { return r.MemberList.length }) // get rid of room without member list
-                .filter(function(r) { return r.MemberList
-                                              .filter(function(m) { return m.UserName === id })
-                                              .length
-                })
-                .map(function(c) { return c.MemberList
-                                           .filter(function(m) { return m.UserName === id })
-                                           [0]
-                })
+                .filter(id => id.match(/^@@/))    // only search in room
+                .map(id => _contacts[id])         // map to room array
+                .filter(r => r.MemberList.length) // get rid of room without member list
+                .filter(r => r.MemberList
+                            .filter(m => m.UserName === id)
+                            .length
+                )
+                .map(c => c.MemberList
+                          .filter(m => m.UserName === id)
+                          [0]
+                )
                 [0]
 
       if (c) {
         c.stranger = true
 
-        Object.keys(c).forEach(function(k) {
+        Object.keys(c).forEach(k => {
           if (typeof c[k] !== 'function') {
             contactWithoutFunction[k] = c[k]
           }
@@ -651,40 +543,37 @@
   }
 
   function getUserName() {
+    if (!WechatyBro.loginState()) {
+      return null
+    }
     var accountFactory = WechatyBro.glue.accountFactory
     return accountFactory
             ? accountFactory.getUserName()
             : null
   }
 
-  function contactFindAsync(filterFunction) {
-    var callback = arguments[arguments.length - 1]
-    if (typeof callback !== 'function') {
-      // here we should in sync mode, because there's no callback
-      throw new Error('async method need to be called via webdriver.executeAsyncScript')
-    }
-
+  function contactFind(filterFunction) {
     var contactFactory = WechatyBro.glue.contactFactory
 
     var match
     if (!filterFunction) {
-      match = function() { return true }
+      match = () => true
     } else {
       match = eval(filterFunction)
     }
 
-    retryFind(0)
+    return new Promise(resolve => retryFind(0, resolve))
 
-    return
+    // return
 
     // retry 3 times, sleep 300ms between each time
-    function retryFind(attempt) {
-      attempt = attempt || 0;
+    function retryFind(attempt, callback) {
+      attempt = attempt || 0
 
       var contactList = contactFactory
                           .getAllFriendContact()
-                          .filter(function(c) { return match(c) })
-                          .map(function(c) { return c.UserName })
+                          .filter(c => match(c))
+                          .map(c => c.UserName)
 
       if (contactList && contactList.length) {
         callback(contactList)
@@ -692,26 +581,20 @@
         callback([])
       } else {
         attempt++
-        setTimeout(function() { return retryFind(attempt) }, 300)
+        setTimeout(() => retryFind(attempt, callback), 1000)
       }
 
     }
   }
 
-  function contactRemarkAsync(UserName, remark) {
-    var callback = arguments[arguments.length - 1]
-    if (typeof callback !== 'function') {
-      // here we should in sync mode, because there's no callback
-      throw new Error('async method need to be called via webdriver.executeAsyncScript')
-    }
-
+  function contactRemark(UserName, remark) {
     if (remark === null || remark === undefined) {
       remark = ''
     }
 
     var contact = _contacts[UserName]
     if (!contact) {
-      throw new Error('contactRemarkAsync() can not found UserName ' + UserName)
+      throw new Error('contactRemark() can not found UserName ' + UserName)
     }
 
     var accountFactory  = WechatyBro.glue.accountFactory
@@ -719,30 +602,28 @@
     var emojiFactory    = WechatyBro.glue.emojiFactory
     var mmHttp          = WechatyBro.glue.mmHttp
 
-    mmHttp({
-      method: "POST",
-      url: confFactory.API_webwxoplog,
-      data: angular.extend({
-        UserName: UserName,
-        CmdId: confFactory.oplogCmdId.MODREMARKNAME,
-        RemarkName: emojiFactory.formatHTMLToSend(remark)
-      }, accountFactory.getBaseRequest()),
-      MMRetry: {
-        count: 3,
-        timeout: 1e4,
-        serial: !0
-      }
-    })
-    .success(function() {
-      contact.RemarkName = remark
-
-      callback(true)
-
-    })
-    .error(function() {
-
-      callback(false)
-
+    return new Promise(resolve => {
+      mmHttp({
+        method: "POST",
+        url: confFactory.API_webwxoplog,
+        data: angular.extend({
+          UserName: UserName,
+          CmdId: confFactory.oplogCmdId.MODREMARKNAME,
+          RemarkName: emojiFactory.formatHTMLToSend(remark),
+        }, accountFactory.getBaseRequest()),
+        MMRetry: {
+          count: 3,
+          timeout: 1e4,
+          serial: !0,
+        }
+      })
+      .success(() => {
+        contact.RemarkName = remark
+        return resolve(true)
+      })
+      .error(() => {
+        return resolve(false)  // TODO: use reject???
+      })
     })
   }
 
@@ -751,14 +632,14 @@
 
     var match
     if (!filterFunction) {
-      match = function() { return true }
+      match = () => true
     } else {
       match = eval(filterFunction)
     }
     // log(match.toString())
     return contactFactory.getAllChatroomContact()
-                         .filter(function(r) { return match(r.NickName) })
-                         .map(function(r) { return r.UserName })
+                         .filter(r => match(r.NickName))
+                         .map(r => r.UserName)
   }
 
   function roomDelMember(ChatRoomName, UserName) {
@@ -766,32 +647,24 @@
     return chatroomFactory.delMember(ChatRoomName, UserName)
   }
 
-  function roomAddMemberAsync(ChatRoomName, UserName) {
-    var callback = arguments[arguments.length - 1]
-    if (typeof callback !== 'function') {
-      // here we should in sync mode, because there's no callback
-      throw new Error('async method need to be called via webdriver.executeAsyncScript')
-    }
-
+  function roomAddMember(ChatRoomName, UserName) {
     var chatroomFactory = WechatyBro.glue.chatroomFactory
     // log(ChatRoomName)
     // log(UserName)
 
-    // There's no return value of addMember :(
-    // https://github.com/wechaty/webwx-app-tracker/blob/f22cb043ff4201ee841990dbeb59e22643092f92/formatted/webwxApp.js#L2404-L2413
-    var timer = setTimeout(function() {
-      log('roomAddMemberAsync() timeout')
-      callback(0)
-    }, 10 * 1000)
+    return new Promise(resolve => {
+      // There's no return value of addMember :(
+      // https://github.com/wechaty/webwx-app-tracker/blob/f22cb043ff4201ee841990dbeb59e22643092f92/formatted/webwxApp.js#L2404-L2413
+      var timer = setTimeout(() => {
+        log('roomAddMember() timeout')
+        // TODO change to reject here. (BREAKING CHANGES)
+        return resolve(0)
+      }, 10 * 1000)
 
-    chatroomFactory.addMember(ChatRoomName, UserName, function(result) {
-
-      clearTimeout(timer)
-      callback(1)
-
-      log('roomAddMemberAsync() return: ')
-      log(result)
-
+      chatroomFactory.addMember(ChatRoomName, UserName, function(result) {
+        clearTimeout(timer)
+        return resolve(1)
+      })
     })
   }
 
@@ -800,56 +673,47 @@
     return chatroomFactory.modTopic(ChatRoomName, topic)
   }
 
-  function roomCreateAsync(UserNameList, topic) {
-    var callback = arguments[arguments.length - 1]
-    if (typeof callback !== 'function') {
-      // here we should in sync mode, because there's no callback
-      throw new Error('async method need to be called via webdriver.executeAsyncScript')
-    }
-
+  function roomCreate(UserNameList, topic) {
     var UserNameListArg = UserNameList.map(function(n) { return { UserName: n } })
 
     var chatroomFactory = WechatyBro.glue.chatroomFactory
     var state           = WechatyBro.glue.state
-    chatroomFactory.create(UserNameListArg)
-                    .then(function(r) {
-                      if (r.BaseResponse && 0 == r.BaseResponse.Ret || -2013 == r.BaseResponse.Ret) {
-                        state.go('chat', { userName: r.ChatRoomName }) // BE CAREFUL: key name is userName, not UserName! 20161001
-                        // if (topic) {
-                        //   setTimeout(_ => roomModTopic(r.ChatRoomName, topic), 3000)
-                        // }
-                        if (!r.ChatRoomName) {
-                          throw new Error('chatroomFactory.create() got empty r.ChatRoomName')
+
+    return new Promise(resolve => {
+      chatroomFactory.create(UserNameListArg)
+                      .then(function(r) {
+                        if (r.BaseResponse && 0 == r.BaseResponse.Ret || -2013 == r.BaseResponse.Ret) {
+                          state.go('chat', { userName: r.ChatRoomName }) // BE CAREFUL: key name is userName, not UserName! 20161001
+                          // if (topic) {
+                          //   setTimeout(_ => roomModTopic(r.ChatRoomName, topic), 3000)
+                          // }
+                          if (!r.ChatRoomName) {
+                            throw new Error('chatroomFactory.create() got empty r.ChatRoomName')
+                          }
+                          resolve(r.ChatRoomName)
+                        } else {
+                          throw new Error('chatroomFactory.create() error with Ret: '
+                                            + r && r.BaseResponse.Ret
+                                            + 'with ErrMsg: '
+                                            + r && r.BaseResponse.ErrMsg
+                                        )
                         }
-                        callback(r.ChatRoomName)
-                      } else {
-                        throw new Error('chatroomFactory.create() error with Ret: '
-                                          + r && r.BaseResponse.Ret
-                                          + 'with ErrMsg: '
-                                          + r && r.BaseResponse.ErrMsg
-                                      )
-                      }
-                    })
-                    .catch(function(e) {
-                      // Async can only return by call callback
-                      callback(
-                        JSON.parse(
-                          JSON.stringify(
-                            e
-                            , Object.getOwnPropertyNames(e)
+                      })
+                      .catch(function(e) {
+                        // TODO change to reject (BREAKIKNG CHANGES)
+                        resolve(
+                          JSON.parse(
+                            JSON.stringify(
+                              e
+                              , Object.getOwnPropertyNames(e)
+                            )
                           )
                         )
-                      )
-                    })
+                      })
+    })
   }
 
-  function verifyUserRequestAsync(UserName, VerifyContent) {
-    var callback = arguments[arguments.length - 1]
-    if (typeof callback !== 'function') {
-      // here we should in sync mode, because there's no callback
-      throw new Error('async method need to be called via webdriver.executeAsyncScript')
-    }
-
+  function verifyUserRequest(UserName, VerifyContent) {
     VerifyContent = VerifyContent || '';
 
     var contactFactory  = WechatyBro.glue.contactFactory
@@ -857,47 +721,45 @@
 
     var Ticket = '' // what's this?
 
-    contactFactory.verifyUser({
-      UserName:        UserName
-      , Opcode:        confFactory.VERIFYUSER_OPCODE_SENDREQUEST
-      , Scene:         confFactory.ADDSCENE_PF_WEB
-      , Ticket:        Ticket
-      , VerifyContent: VerifyContent
-    })
-    .then(function() {  // succ
-      // alert('ok')
-      // log('friendAdd(' + UserName + ', ' + VerifyContent + ') done')
-      callback(true)
-    }, function(t) {    // fail
-      // alert('not ok')
-      log('friendAdd(' + UserName + ', ' + VerifyContent + ') fail: ' + t)
-      callback(false)
+    return new Promise(resolve => {
+      contactFactory.verifyUser({
+        Opcode: confFactory.VERIFYUSER_OPCODE_SENDREQUEST,
+        Scene:  confFactory.ADDSCENE_PF_WEB,
+        UserName,
+        Ticket,
+        VerifyContent,
+      })
+      .then(() => {  // succ
+        // alert('ok')
+        // log('friendAdd(' + UserName + ', ' + VerifyContent + ') done')
+        resolve(true)
+      }, (err) => {    // fail
+        // alert('not ok')
+        log('friendAdd(' + UserName + ', ' + VerifyContent + ') fail: ' + err)
+        resolve(false)
+      })
     })
   }
 
-  function verifyUserOkAsync(UserName, Ticket) {
-    var callback = arguments[arguments.length - 1]
-    if (typeof callback !== 'function') {
-      // here we should in sync mode, because there's no callback
-      throw new Error('async method need to be called via webdriver.executeAsyncScript')
-    }
-
+  function verifyUserOk(UserName, Ticket) {
     var contactFactory  = WechatyBro.glue.contactFactory
     var confFactory     = WechatyBro.glue.confFactory
 
-    contactFactory.verifyUser({
-      UserName:   UserName
-      , Opcode:   confFactory.VERIFYUSER_OPCODE_VERIFYOK
-      , Scene:    confFactory.ADDSCENE_PF_WEB
-      , Ticket:   Ticket
-    }).then(function() {  // succ
-      // alert('ok')
-      log('friendVerify(' + UserName + ', ' + Ticket + ') done')
-      callback(true)
-    }, function(err) {       // fail
-      // alert('err')
-      log('friendVerify(' + UserName + ', ' + Ticket + ') fail')
-      callback(false)
+    return new Promise(resolve => {
+      contactFactory.verifyUser({
+        UserName: UserName,
+        Opcode:   confFactory.VERIFYUSER_OPCODE_VERIFYOK,
+        Scene:    confFactory.ADDSCENE_PF_WEB,
+        Ticket:   Ticket,
+      }).then(() => {  // succ
+        // alert('ok')
+        log('friendVerify(' + UserName + ', ' + Ticket + ') done')
+        return resolve(true)
+      }, err => {       // fail
+        // alert('err')
+        log('friendVerify(' + UserName + ', ' + Ticket + ') fail')
+        return resolve(false)
+      })
     })
   }
 
@@ -911,21 +773,18 @@
 
 
 
-
-  port = port || 8788
 
   /*
    * WechatyBro injectio must return this object.
    * PuppetWebBridge need this to decide if injection is successful.
    */
   var retObj = {
-    code: 200 // 2XX ok, 4XX/5XX error. HTTP like
-    , message: 'any message'
-    , port: port
+    code: 200, // 2XX ok, 4XX/5XX error. HTTP like
+    message: 'any message',
   }
 
   if (typeof this.WechatyBro !== 'undefined') {
-    retObj.code = 201
+    retObj.code    = 201
     retObj.message = 'WechatyBro already injected?'
     return retObj
   }
@@ -933,87 +792,72 @@
   var WechatyBro = {
     glue: {
       // will be initialized by glueToAngular() function
-    }
+    },
 
     // glue funcs
     // , getLoginStatusCode: function() { return WechatyBro.glue.loginScope.code }
     // , getLoginQrImgUrl:   function() { return WechatyBro.glue.loginScope.qrcodeUrl }
-    , angularIsReady:    angularIsReady
+    angularIsReady,
 
     // variable
-    , vars: {
-      loginStatus:      false
-      , initStatus:     false
+    vars: {
+      loginState : false,
+      initState  : false,
 
-      , socket:     null
-      , eventsBuf:  []
-      , scanCode:   null
-      , heartBeatTimmer:   null
-    }
+      scanCode        : null,
+      heartBeatTimmer : null,
+    },
 
     // funcs
-    , init: init  // initialize WechatyBro @ Browser
-    , send: send  // send message to wechat user
-    , clog: clog  // log to Console
-    , slog: slog  // log to SocketIO
-    , log:  log   // log to both Console & SocketIO
-    , ding: ding  // simple return 'dong'
-    , quit: quit  // quit wechat
-    , emit: emit  // send event to server
-    , logout: logout // logout current logined user
+    ding,   // simple return 'dong'
+    emit:   window.emit,  // send event to Node.js
+    init,   // initialize WechatyBro @ Browser
+    log,    // log to Node.js
+    logout, // logout current logined user
+    send,   // send message to wechat user
 
-    , getContact:          getContact
-    , getUserName:         getUserName
-    , getMsgImg:           getMsgImg
-    , getMsgEmoticon:      getMsgEmoticon
-    , getMsgVideo:         getMsgVideo
-    , getMsgVoice:         getMsgVoice
-    , getMsgPublicLinkImg: getMsgPublicLinkImg
-    , getBaseRequest:      getBaseRequest
-    , getPassticket:       getPassticket
-    , getUploadMediaUrl:   getUploadMediaUrl
-    , sendMedia:           sendMedia
-    , forward:             forward
+    getContact,
+    getUserName,
+    getMsgImg,
+    getMsgEmoticon,
+    getMsgVideo,
+    getMsgVoice,
+    getMsgPublicLinkImg,
+    getBaseRequest,
+    getPassticket,
+    getUploadMediaUrl,
+    sendMedia,
+    forward,
+    getCheckUploadUrl,
 
     // for Wechaty Contact Class
-    , contactFindAsync:   contactFindAsync
-    , contactRemarkAsync: contactRemarkAsync
+    contactFind,
+    contactRemark,
 
     // for Wechaty Room Class
-    , roomCreateAsync:    roomCreateAsync
-    , roomAddMemberAsync: roomAddMemberAsync
-    , roomFind:           roomFind
-    , roomDelMember:      roomDelMember
-    , roomModTopic:       roomModTopic
+    roomCreate,
+    roomAddMember,
+    roomFind,
+    roomDelMember,
+    roomModTopic,
 
     // for Friend Request
-    , verifyUserRequestAsync: verifyUserRequestAsync
-    , verifyUserOkAsync:      verifyUserOkAsync
-    // , friendAdd
-    // , friendVerify
+    verifyUserRequest,
+    verifyUserOk,
 
     // test purpose
-    , isLogin: isLogin
-    , initClog: initClog
+    isLogin: () => {
+      log('isLogin() DEPRECATED. use loginState() instead');
+      return loginState()
+    },
+    loginState,
   }
 
   this.WechatyBro = WechatyBro
-  retObj.code = 200
+
+  retObj.code    = 200
   retObj.message = 'WechatyBro Inject Done'
 
-  /**
-   * Two return mode of WebDriver (should be one of them at a time)
-   * 1. a callback. return a value by call callback with args
-   * 2. direct return
-   */
-  var callback = arguments[arguments.length - 1]
-  if (typeof callback === 'function') {
-    return callback(retObj)
-  }
   return retObj
 
-  // retObj.code = 500
-  // retObj.message = 'SHOULD NOT RUN TO HERE'
-  // return retObj
-
-}.apply(window, arguments))
+}.apply(window))

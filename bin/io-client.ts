@@ -2,7 +2,7 @@
 /**
  *   Wechaty - https://github.com/chatie/wechaty
  *
- *   @copyright 2016-2017 Huan LI <zixia@zixia.net>
+ *   @copyright 2016-2018 Huan LI <zixia@zixia.net>
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -42,19 +42,21 @@ __________________________________________________
 
 `
 
-let   token   = config.token
+let token = config.token
 
 if (!token) {
   log.error('Client', 'token not found: please set WECHATY_TOKEN in environment before run io-client')
   // process.exit(-1)
-  token = config.DEFAULT_TOKEN
+  token = config.default.DEFAULT_TOKEN
   log.warn('Client', `set token to "${token}" for demo purpose`)
 }
 
 console.log(welcome)
 log.info('Client', 'Starting for WECHATY_TOKEN: %s', token)
 
-const client = new IoClient(token, log)
+const client = new IoClient({
+  token,
+})
 
 client.init()
     .catch(onError.bind(client))

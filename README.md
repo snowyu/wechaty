@@ -19,7 +19,7 @@ Wechaty is a Bot Framework for Wechat **Personal** Account which can help you cr
 ## Voice of the Developer
 
 > "Wechaty is a great solution, I believe there would be much more users recognize it." [link](https://github.com/chatie/wechaty/pull/310#issuecomment-285574472)  
-> -- @Gcaufy, Tencent
+> -- @Gcaufy, Tencent Engineer, Author of [WePY](https://github.com/Tencent/wepy)
 
 > "太好用，好用的想哭"  
 > -- @xinbenlv, Google Engineer, Founder of HaoShiYou.org
@@ -28,10 +28,10 @@ Wechaty is a Bot Framework for Wechat **Personal** Account which can help you cr
 > -- @Jarvis, Baidu Engineer
 
 > "Wechaty让运营人员更多的时间思考如何进行活动策划、留存用户，商业变现" [link](http://mp.weixin.qq.com/s/dWHAj8XtiKG-1fIS5Og79g)  
-> -- @lijiarui, Orange Interactive Founder.
+> -- @lijiarui, CEO of BotOrange.
 
 > "If you know js ... try Chatie/wechaty, it's easy to use."  
-> -- @Urinx Uri Lee, WeixinBot Author
+> -- @Urinx Uri Lee, Author of [WeixinBot(Python)](https://github.com/Urinx/WeixinBot)
 
 See more at [Wiki:VoiceOfDeveloper](https://github.com/Chatie/wechaty/wiki/VoiceOfDeveloper)
 
@@ -44,13 +44,13 @@ Wechaty.instance() // Singleton
 .on('scan', (url, code) => console.log(`Scan QR Code to login: ${code}\n${url}`))
 .on('login',       user => console.log(`User ${user} logined`))
 .on('message',  message => console.log(`Message: ${message}`))
-.init()
+.start()
 ```
-> **Notice: Wechaty requires Node.js version >= 6.9.0**
+> **Notice: Wechaty requires Node.js version >= 8.5**
 
 This bot can log all messages to the console.
 
-You can find more examples from [Wiki](https://github.com/chatie/wechaty/wiki/Example) and [Example Directory](https://github.com/chatie/wechaty/blob/master/example/).
+You can find more examples from [Wiki](https://github.com/chatie/wechaty/wiki/Examples) and [Example Directory](https://github.com/chatie/wechaty/blob/master/examples/).
 
 GETTING STARTED
 ---------------
@@ -58,10 +58,10 @@ GETTING STARTED
 ## A Great Live Coding Tutorial
 
 <div align="center">
-<a target="_blank" href="https://blog.chatie.io/guide/2017/01/01/getting-started-wechaty.html"><img src="https://cloud.githubusercontent.com/assets/1361891/21722581/3ec957d0-d468-11e6-8888-a91c236e0ba2.jpg" border=0 width="60%"></a>
+<a target="_blank" href="https://blog.chatie.io/guide/2017/01/01/getting-started-wechaty.html"><img src="http://blog.chatie.io/download/2017/lijiarui-wechaty-quick-start-guide-video.jpg" border=0 width="60%"></a>
 </div>
 
-The above 10 minute video tutorial is a good start point if you are new to Wechaty.
+The above 15 minute video tutorial is a good start point if you are new to Wechaty.
 
 > Source code in the video can be found at: [Wechaty Starter Repository](https://github.com/lijiarui/wechaty-getting-started)
 
@@ -105,6 +105,7 @@ $ docker run -ti --rm --volume="$(pwd)":/bot zixia/wechaty mybot.ts # for TypeSc
 [![Greenkeeper badge](https://badges.greenkeeper.io/Chatie/wechaty.svg)](https://greenkeeper.io/)
 
 ```shell
+$ npm init
 $ npm install wechaty
 
 $ cat > mybot.js <<'_EOF_'
@@ -197,6 +198,10 @@ Howto [contribute](https://github.com/chatie/wechaty/blob/master/CONTRIBUTING.md
 
 Contributions in any form are highly encouraged and welcome! Be it new or improved presets, optimized streaming code or just some cleanup. So start forking!
 
+## Contributors List
+
+https://github.com/Chatie/wechaty/wiki/Contributors
+
 ## Code Contributions
 
 If you want to add new features or change the API, please submit an issue first to make sure no one else is already working on the same thing and discuss the implementation and API details with maintainers and users by creating an issue. When everything is settled down, you can submit a pull request.
@@ -209,20 +214,9 @@ Make sure to add tests for your features and bugfixes and update the documentati
 
 You can directly submit pull requests for documentation changes.
 
-## Main Contributors
+## Join US
 
-* [cherry-geqi](https://github.com/cherry-geqi)
-* [Gcaufy](https://github.com/Gcaufy)
-* [JasLin](https://github.com/JasLin)
-* [lijiarui](https://github.com/lijiarui)
-* [mukaiu](https://github.com/mukaiu)
-* [xinbenlv](https://github.com/xinbenlv)
-
-See more at <https://github.com/Chatie/wechaty/graphs/contributors>
-
-## Join Us
-
-Wechaty is used in many ChatBot projects by hundreds of developers. If you want to talk with other developers, just scan the following QR Code in WeChat with secret code _wechaty_, join our **Wechaty Developers' Home** now.
+Wechaty is used in many ChatBot projects by hundreds of developers. If you want to talk with other developers, just scan the following QR Code in WeChat with secret code _wechaty_, join our **Wechaty Developers' Home**.
 
 ![Wechaty Developers' Home](https://chatie.io/wechaty/images/bot-qr-code.png)
 
@@ -238,10 +232,10 @@ Wechaty is far from perfect. The following things should be addressed in the fut
 
 AUTHOR
 ------
-Huan LI \<zixia@zixia.net\> (http://linkedin.com/in/zixia)
+[Huan LI](http://linkedin.com/in/zixia) \<zixia@zixia.net\>
 
-<a href="http://stackoverflow.com/users/1123955/zixia">
-  <img src="http://stackoverflow.com/users/flair/1123955.png" width="208" height="58" alt="profile for zixia at Stack Overflow, Q&amp;A for professional and enthusiast programmers" title="profile for zixia at Stack Overflow, Q&amp;A for professional and enthusiast programmers">
+<a href="https://stackexchange.com/users/265499">
+  <img src="https://stackexchange.com/users/flair/265499.png" width="208" height="58" alt="profile for zixia on Stack Exchange, a network of free, community-driven Q&amp;A sites" title="profile for zixia on Stack Exchange, a network of free, community-driven Q&amp;A sites">
 </a>
 
 ## My Story

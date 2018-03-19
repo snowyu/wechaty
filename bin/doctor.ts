@@ -2,7 +2,7 @@
 /**
  *   Wechaty - https://github.com/chatie/wechaty
  *
- *   @copyright 2016-2017 Huan LI <zixia@zixia.net>
+ *   @copyright 2016-2018 Huan LI <zixia@zixia.net>
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ const doctor = new Doctor()
 
 async function main() {
   let ipcTestResult: string
-  const chromedriverVersion = doctor.chromedriverVersion()
   try {
     await doctor.testTcp()
     ipcTestResult = 'PASS'
@@ -43,17 +42,13 @@ async function main() {
 
   1. Wechaty version: ${wechaty.version()}
   2. ${os.type()} ${os.arch()} version ${os.release()} memory ${Math.floor(os.freemem() / 1024 / 1024)}/${Math.floor(os.totalmem() / 1024 / 1024)} MB
-  3. Docker: ${config.dockerMode}
+  3. Docker: ${config.docker}
   4. Node version: ${process.version}
   5. Tcp IPC TEST: ${ipcTestResult}
-  6. Chromedriver: ${chromedriverVersion}
 
   `)
 
 }
 
-try {
-  main()
-} catch (err) {
-  console.error('main() exception: %s', err.message || err)
-}
+main()
+.catch(err => console.error('main() exception: %s', err))

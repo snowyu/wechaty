@@ -1,7 +1,7 @@
 /**
  *   Wechaty - https://github.com/chatie/wechaty
  *
- *   @copyright 2016-2017 Huan LI <zixia@zixia.net>
+ *   @copyright 2016-2018 Huan LI <zixia@zixia.net>
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -17,17 +17,11 @@
  *
  */
 export { Bridge }                           from './bridge'
-export {
-  Browser,
-  IWebDriverOptionsCookie,
-}                                           from './browser'
 export { Event }                            from './event'
 export {
   PuppetWebFriendRequest as FriendRequest,
 }                                           from './friend-request'
 import { PuppetWeb }                        from './puppet-web'
-export { Server }                           from './server'
-export { Watchdog }                         from './watchdog'
 
 export default PuppetWeb
 export {

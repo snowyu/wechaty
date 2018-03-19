@@ -17,6 +17,10 @@
     , "noUnusedParameters": false
     , "noImplicitThis": false
     , "traceResolution": false
+    , "lib": [
+        "es2016"
+      , "dom"
+    ]
   }
   , "exclude": [
       "node_modules/"
@@ -24,9 +28,10 @@
   ]
   , "include": [
        "bin/*.ts"
-     , "example/**/*.ts"
+     , "scripts/**/*.ts"
+     , "examples/**/*.ts"
      , "src/**/*.ts"
-     , "test/**/*.spec.ts"
+     , "tests/**/*.spec.ts"
      , "bot/**/*.ts"
      , "app/**/*.ts"
   ]

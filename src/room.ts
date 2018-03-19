@@ -1,8 +1,7 @@
 /**
- *
  *   Wechaty - https://github.com/chatie/wechaty
  *
- *   @copyright 2016-2017 Huan LI <zixia@zixia.net>
+ *   @copyright 2016-2018 Huan LI <zixia@zixia.net>
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -25,13 +24,13 @@ import {
   Raven,
   Sayable,
   log,
-}                     from './config'
-import Contact        from './contact'
+}                 from './config'
+import Contact    from './contact'
 import {
   Message,
   MediaMessage,
-}                     from './message'
-import UtilLib        from './util-lib'
+}                 from './message'
+import Misc       from './misc'
 
 interface RoomObj {
   id:               string,
@@ -81,7 +80,7 @@ export interface MemberQueryFilter {
  * All wechat rooms(groups) will be encapsulated as a Room.
  *
  * `Room` is `Sayable`,
- * [Example/Room-Bot]{@link https://github.com/Chatie/wechaty/blob/master/example/room-bot.ts}
+ * [Examples/Room-Bot]{@link https://github.com/Chatie/wechaty/blob/master/examples/room-bot.ts}
  */
 export class Room extends EventEmitter implements Sayable {
   private static pool = new Map<string, Room>()
@@ -101,7 +100,7 @@ export class Room extends EventEmitter implements Sayable {
   /**
    * @private
    */
-  public toString()    { return this.id }
+  public toString()    { return `@Room<${this.topic()}>` }
 
   /**
    * @private
@@ -138,7 +137,7 @@ export class Room extends EventEmitter implements Sayable {
     } else if (this.isReady()) {
       return this
     } else if (this.obj && this.obj.id) {
-      log.warn('Room', 'ready() has obj.id but memberList empty in room %s. reloading', this.obj.topic)
+      log.verbose('Room', 'ready() is not full loaded in room<topic:%s>. reloading', this.obj.topic)
     }
 
     if (!contactGetter) {
@@ -150,11 +149,33 @@ export class Room extends EventEmitter implements Sayable {
     }
 
     try {
-      const data = await contactGetter(this.id)
-      log.silly('Room', `contactGetter(${this.id}) resolved`)
-      this.rawObj = data
-      await this.readyAllMembers(this.rawObj.MemberList || [])
-      this.obj    = this.parse(this.rawObj)
+      let ttl = 7
+      while (ttl--) {
+        const roomRawObj = await contactGetter(this.id) as RoomRawObj
+
+        const currNum = roomRawObj.MemberList && roomRawObj.MemberList.length || 0
+        const prevNum = this.rawObj && this.rawObj.MemberList && this.rawObj.MemberList.length || 0
+
+        log.silly('Room', `ready() contactGetter(%s) MemberList.length:%d at ttl:%d`,
+          this.id,
+          currNum,
+          ttl,
+        )
+
+        if (currNum) {
+          if (prevNum === currNum) {
+            log.verbose('Room', `ready() contactGetter(${this.id}) done at ttl:%d`, ttl)
+            break
+          }
+          this.rawObj = roomRawObj
+        }
+
+        log.silly('Room', `ready() contactGetter(${this.id}) retry at ttl:%d`, ttl)
+        await new Promise(r => setTimeout(r, 1000)) // wait for 1 second
+      }
+
+      await this.readyAllMembers(this.rawObj && this.rawObj.MemberList || [])
+      this.obj = this.parse(this.rawObj)
       if (!this.obj) {
         throw new Error('no this.obj set after contactGetter')
       }
@@ -357,7 +378,7 @@ export class Room extends EventEmitter implements Sayable {
          * @rui: webwx's NickName here return contactAlias, if not set contactAlias, return name
          * @rui: 2017-7-2 webwx's NickName just ruturn name, no contactAlias
          */
-        mapList[member.UserName] = UtilLib.stripEmoji(tmpName)
+        mapList[member.UserName] = Misc.stripEmoji(tmpName)
       })
     }
     return mapList
@@ -506,27 +527,29 @@ export class Room extends EventEmitter implements Sayable {
    * })
    */
   public topic(newTopic?: string): string | void {
+    log.verbose('Room', 'topic(%s)', newTopic ? newTopic : '')
     if (!this.isReady()) {
       log.warn('Room', 'topic() room not ready')
     }
 
-    if (newTopic) {
-      log.verbose('Room', 'topic(%s)', newTopic)
-      config.puppetInstance()
-            .roomTopic(this, newTopic)
-            .catch(e => {
-              log.warn('Room', 'topic(newTopic=%s) exception: %s',
-                                newTopic, e && e.message || e,
-                      )
-              Raven.captureException(e)
-            })
-      if (!this.obj) {
-        this.obj = <RoomObj>{}
-      }
-      Object.assign(this.obj, { topic: newTopic })
-      return
+    if (typeof newTopic === 'undefined') {
+      return Misc.plainText(this.obj ? this.obj.topic : '')
     }
-    return UtilLib.plainText(this.obj ? this.obj.topic : '')
+
+    config.puppetInstance()
+          .roomTopic(this, newTopic)
+          .catch(e => {
+            log.warn('Room', 'topic(newTopic=%s) exception: %s',
+                              newTopic, e && e.message || e,
+                    )
+            Raven.captureException(e)
+          })
+
+    if (!this.obj) {
+      this.obj = <RoomObj>{}
+    }
+    this.obj['topic'] = newTopic
+    return
   }
 
   /**
@@ -669,7 +692,7 @@ export class Room extends EventEmitter implements Sayable {
     /**
      * ISSUE #64 emoji need to be striped
      */
-    const filterValue: string  = UtilLib.stripEmoji(UtilLib.plainText(queryArg[filterKey]))
+    const filterValue: string  = Misc.stripEmoji(Misc.plainText(queryArg[filterKey]))
 
     const keyMap = {
       contactAlias: 'contactAliasMap',
@@ -844,7 +867,7 @@ export class Room extends EventEmitter implements Sayable {
                                   .catch(e => {
                                     log.verbose('Room', 'findAll() rejected: %s', e.message)
                                     Raven.captureException(e)
-                                    return [] // fail safe
+                                    return [] as Room[] // fail safe
                                   })
 
     await Promise.all(roomList.map(room => room.ready()))

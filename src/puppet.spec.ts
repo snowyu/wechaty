@@ -1,7 +1,8 @@
+#!/usr/bin/env ts-node
 /**
  *   Wechaty - https://github.com/chatie/wechaty
  *
- *   @copyright 2016-2017 Huan LI <zixia@zixia.net>
+ *   @copyright 2016-2018 Huan LI <zixia@zixia.net>
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -16,17 +17,19 @@
  *   limitations under the License.
  *
  */
-import { test }   from 'ava'
+// tslint:disable:no-shadowed-variable
+import * as test  from 'blue-tape'
+// import * as sinon from 'sinon'
+
+import Profile    from './profile'
 import PuppetWeb  from './puppet-web'
 
-test('Puppet smoke testing', t => {
-  const p = new PuppetWeb()
+test('Puppet smoke testing', async t => {
+  const profile = new Profile(Math.random().toString(36).substr(2, 5))
+  const p = new PuppetWeb({ profile })
 
-  t.is(p.state.target(), 'dead', 'should be dead target state after instanciate')
-  t.is(p.state.current(), 'dead', 'should be dead current state after instanciate')
-  p.state.target('live')
-  p.state.current('live', false)
-  t.is(p.state.target(), 'live', 'should be live target state after set')
-  t.is(p.state.current(), 'live', 'should be live current state after set')
-  t.is(p.state.inprocess(), true, 'should be inprocess current state after set')
+  t.ok(p.state.off(), 'should be OFF state after instanciate')
+  p.state.on('pending')
+  t.ok(p.state.on(), 'should be ON state after set')
+  t.ok(p.state.pending(), 'should be pending state after set')
 })
